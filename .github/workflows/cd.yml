@@ -1,0 +1,86 @@
+name: cd
+
+on: [ pull_request ]
+
+jobs:
+  push-docker-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Take tag version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Java17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      #      - name: backend environment setting
+      #        run: |
+      #          touch .env.production
+      #          echo -e ${{ secrets.BACKEND_PRODUCTION_ENVIRONMENT }} > .env.production
+
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Docker registry login
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.access_token }}
+
+      - name: Build with Gradle
+        run: chmod +x gradlew && ./gradlew bootJar
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v3.2.0
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: |
+            ghcr.io/${{ github.repository_owner }}:latest
+            ghcr.io/${{ github.repository_owner }}:${{ steps.tag_version.outputs.new_tag }}
+          push: true
+
+#  CD:
+#    needs: [Register-Docker-Image]
+#    runs-on: ubuntu-20.04
+#    defaults:
+#      run:
+#        working-directory: './backend'
+#    outputs:
+#      status: ${{ job.status }}
+#    steps:
+#      - name: checkout
+#        uses: actions/checkout@v3
+#
+#      - name: copy docker compose & config file into production server
+#        uses: appleboy/scp-action@master
+#        with:
+#          host: ${{ secrets.BACKEND_PROD_REMOTE_IP }}
+#          username: ${{ secrets.BACKEND_PROD_REMOTE_SSH_ID }}
+#          password: ${{ secrets.BACKEND_PROD_REMOTE_ADMIN_KEY }}
+#          port: ${{ secrets.BACKEND_PROD_REMOTE_SSH_PORT }}
+#          source: 'backend/docker-compose.prod.yml,backend/nginx/prod/nginx.conf,backend/scripts/prod-deploy.sh'
+#          target: 'moyeomoyeo'
+#
+#      - name: deploy
+#        uses: appleboy/ssh-action@v0.1.4
+#        with:
+#          host: ${{ secrets.BACKEND_PROD_REMOTE_IP }}
+#          username: ${{ secrets.BACKEND_PROD_REMOTE_SSH_ID }}
+#          password: ${{ secrets.BACKEND_PROD_REMOTE_ADMIN_KEY }}
+#          port: ${{ secrets.BACKEND_PROD_REMOTE_SSH_PORT }}
+#          script: |
+#            cd moyeomoyeo
+#            sudo chmod +x ./backend/scripts/prod-deploy.sh
+#            ./backend/scripts/prod-deploy.sh ${{ secrets.NCP_ACCESS_KEY }} ${{ secrets.NCP_SECRET_KEY }} ${{ secrets.NCP_DOCKER_REGISTRY }} ${{ secrets.BACKEND_PRODUCTION_ENVIRONMENT }}

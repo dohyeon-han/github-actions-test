@@ -36,7 +36,26 @@ spring:
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
+    open-in-view: true
+  data:
+    redis:
+      host: localhost
+      port: 6380
+---
+spring:
+  profiles:
+    activate:
+      on-profile: "prod"
+  datasource:
+    url: "jdbc:mysql://db:3306/test?serverTimezone=Asia/Seoul"
+    username: prod
+    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
     open-in-view: true
   data:
     redis:

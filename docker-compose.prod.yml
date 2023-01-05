@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  spring1:
+    container_name: spring1
+    image: ghcr.io/dohyeon-han/github-actions-test:latest
+    environment:
+      SERVER_MODE: prod
+    restart: always
+    platform: linux/x86_64
+    ports:
+      - "8081:8080"
+    networks:
+      - backbone
+
+  spring2:
+    container_name: spring2
+    image: ghcr.io/dohyeon-han/github-actions-test:latest
+    environment:
+      SERVER_MODE: prod
+    restart: always
+    platform: linux/x86_64
+    ports:
+      - "8082:8080"
+    networks:
+      - backbone
+
+  db:
+    container_name: db
+    image: mysql:8.0
+    platform: linux/x86_64
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: test
+      MYSQL_USER: local
+      MYSQL_PASSWORD: 1234
+      MYSQL_ROOT_PASSWORD: 1234
+    volumes:
+      - ~/project-volume/db:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    networks:
+      - backbone
+
+  redis:
+    container_name: redis
+    image: redis
+    platform: linux/x86_64
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - backbone
+
+networks:
+  backbone:
+    name: backbone
+    driver: bridge

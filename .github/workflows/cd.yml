@@ -1,0 +1,100 @@
+name: cd
+
+on: [ pull_request ]
+
+env:
+  MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+  MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
+  MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+
+jobs:
+  push-docker-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Take tag version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Java17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Docker registry login
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.access_token }}
+
+      - name: Build with Gradle
+        run: chmod +x gradlew && ./gradlew bootJar
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/github-actions-test:latest
+            ghcr.io/${{ github.repository_owner }}/github-actions-test:${{ steps.tag_version.outputs.new_tag }}
+          push: true
+
+  deploy:
+    needs: [ push-docker-image ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set application.yml
+        uses: microsoft/variable-substitution@v1
+        with:
+          files: ./src/main/resources/application-prod.yml
+        env:
+          spring.datasource.url: jdbc:mysql://db:3306/${{ secrets.MYSQL_DATABASE }}?serverTimezone=Asia/Seoul
+          spring.datasource.username: ${{ secrets.MYSQL_USERNAME }}
+          spring.datasource.password: ${{ secrets.MYSQL_PASSWORD }}
+
+      - name: Set docker-compose.prod.yml
+        uses: microsoft/variable-substitution@v1
+        with:
+          files: ./docker-compose.prod.yml
+        env:
+          services.db.environment.MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          services.db.environment.MYSQL_USER: ${{ secrets.MYSQL_USERNAME }}
+          services.db.environment.MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          services.db.environment.MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+
+      - name: Copy docker compose & config file into production server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_IP }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          source: './docker-compose.prod.yml,./script/deploy.sh'#,backend/nginx/prod/nginx.conf,
+          target: 'github-actions-test'
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SSH_IP }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd github-actions-test
+            sudo chmod +x ./script/deploy.sh
+            ./script/deploy.sh

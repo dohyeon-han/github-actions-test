@@ -1,9 +1,7 @@
-# default Profile
 spring:
   profiles:
     active: "build"
 ---
-# build config
 spring:
   config:
     activate:
@@ -23,7 +21,6 @@ spring:
       host: localhost
       port: 6380
 ---
-# local config
 spring:
   config:
     activate:
@@ -43,7 +40,6 @@ spring:
       host: redis
       port: 6379
 ---
-# prod config
 spring:
   config:
     activate:

@@ -21,7 +21,7 @@ spring:
   data:
     redis:
       host: localhost
-      port: 6379
+      port: 6380
 ---
 # local config
 spring:
@@ -29,16 +29,36 @@ spring:
     activate:
       on-profile: "local"
   datasource:
-    url: "jdbc:mysql://db:3306/test?serverTimezone=Asia/Seoul"
+    url: "jdbc:mysql://local-db:3306/test?serverTimezone=Asia/Seoul"
     username: local
     password: 1234
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     open-in-view: true
   data:
     redis:
-      host: localhost
-      port: 6380
+      host: redis
+      port: 6379
+---
+# prod config
+spring:
+  config:
+    activate:
+      on-profile: "prod"
+  datasource:
+    url: jdbc:mysql://db:3306/${MYSQL_DATABASE}?serverTimezone=Asia/Seoul
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    open-in-view: true
+  data:
+    redis:
+      host: redis
+      port: 6379

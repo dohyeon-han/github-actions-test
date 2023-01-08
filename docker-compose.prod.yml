@@ -6,7 +6,7 @@ services:
     restart: always
     image: ghcr.io/dohyeon-han/github-actions-test:latest
     environment:
-      SERVER_MODE: prod
+      SERVER_MODE: spring1
     platform: linux/x86_64
     ports:
       - "8081:8080"
@@ -18,7 +18,7 @@ services:
     restart: always
     image: ghcr.io/dohyeon-han/github-actions-test:latest
     environment:
-      SERVER_MODE: prod
+      SERVER_MODE: spring2
     platform: linux/x86_64
     ports:
       - "8082:8080"

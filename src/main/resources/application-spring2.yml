@@ -1,7 +1,7 @@
 spring:
   config:
     activate:
-      on-profile: "prod"
+      on-profile: "spring2"
   datasource:
     url: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?serverTimezone=Asia/Seoul
     username: ${MYSQL_USERNAME}
